@@ -17,5 +17,3 @@ first_num=int(input('첫번째 수를 입력하세요 : '))
 cal=input('계산을 입력하세요(+,-,/,**) : ')
 second_num=int(input('두번째 수를 입력하세요 :'))     
 calculate(cal)
-
-print('hello world')
