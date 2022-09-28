@@ -1,14 +1,12 @@
 from glob import glob
 
 def file(path):
-    train='\n'.join(sorted(glob(path+'/*/*.png')))
-    test='\n'.join(sorted(glob(path+'/*/*.png')))
+    img='\n'.join(sorted(glob(path+'/*/*.png')))  #1
+    str=open('%s.txt'%path.split('/')[-1],'w')    #2
+    [str.writelines(x) for x in img]              #3
+    str.close()                                   #4
+    
+    
+    
 
-    if path=='./MNIST_fashion/train':    
-        t1=open('./train.txt','w')
-        [t1.writelines(x) for x in train]
-        t1.close()
-    else:
-        t2=open('./test.txt','w')
-        [t2.writelines(y) for y in test]
-        t2.close()
+

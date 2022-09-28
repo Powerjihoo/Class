@@ -2,7 +2,7 @@ import torch, cv2
 import numpy as np
 
 size=256
-num_training=10000
+num_training=100
 lr=100
 
 random_tensor=torch.randn((size,size,3),dtype=torch.float)
