@@ -1,0 +1,119 @@
+import cv2
+import os
+import numpy as np
+import torch
+
+def load_image(path,num_img):
+    imgs=np.zeros((num_img,28,28))
+    cls=np.zeros(num_img)
+
+    cls_names=os.listdir(path)
+    img_count=0
+    for ic in range(len(cls_names)):
+        path_temp=path+cls_names[ic]+'/'
+        #print(path_temp)
+        img_names=os.listdir(path_temp)
+
+        for im in range(len(img_names)):
+            load_img=cv2.imread(path_temp+img_names[im])
+            #cv2.imshow('img',load_img)
+            #cv2.waitKey(100)
+            imgs[img_count,:,:]=load_img[:,:,0]
+            #정답값 넣어놓기
+            cls[img_count]=ic
+            img_count+=1
+
+    return imgs,cls
+
+
+class Autoencoder(torch.nn.Module):
+    def __init__(self, input_size, encode_size):
+        super(Autoencoder, self).__init__()
+        self.encoder = torch.nn.Sequential(
+            torch.nn.Linear(input_size, 128),
+            torch.nn.ReLU(),
+            torch.nn.Linear(128, 64),
+            torch.nn.ReLU(),
+            torch.nn.Linear(64, 12),
+            torch.nn.ReLU(),
+            torch.nn.Linear(12, encode_size)
+        )
+        self.decoder = torch.nn.Sequential(
+            torch.nn.Linear(encode_size, 12),
+            torch.nn.ReLU(),
+            torch.nn.Linear(12, 64),
+            torch.nn.ReLU(),
+            torch.nn.Linear(64, 128),
+            torch.nn.ReLU(),
+            torch.nn.Linear(128, input_size),
+            torch.nn.Sigmoid()
+        )
+
+    def forward(self, input_tensor):
+        enc_vec = self.encoder(input_tensor)
+        dec_vec = self.decoder(enc_vec)
+
+        return enc_vec, dec_vec
+
+def Mini_batch_training(train_img,batch_size):
+    batch_img=np.zeros((batch_size,28, 28))
+    rand_num=np.random.randint(0,train_img.shape[0],size=batch_size)
+
+    for it in range(batch_size):
+        temp=rand_num[it]
+        #이부분때문에 Sigmoid함수를 쓰게됨됨
+        batch_img[it,:,:]=train_img[temp,:,:]/255.0
+
+    return batch_img
+import torch.nn
+
+from L6_auto_function import *
+
+#1. load_image
+train_path='./mnist/train/'
+train_images,train_cls=load_image(train_path,60000)
+
+
+#2. build_model
+enc_size=3
+model=Autoencoder(28*28,enc_size)
+
+
+#3. parameter_setting
+learning_rate=0.005
+num_iter=10000
+optimizer=torch.optim.Adam(model.parameters(),lr=learning_rate)
+
+for it in range(num_iter):
+    batch_img=Mini_batch_training(train_images,64)
+    batch_vec=np.reshape(batch_img,[-1,28*28])
+
+    #training step
+    model.train()
+    optimizer.zero_grad()
+    _,dec_vec=model(torch.from_numpy(batch_vec.astype(np.float32)))
+
+    train_loss=torch.mean(torch.square(torch.from_numpy(batch_vec.astype(np.float32))-dec_vec))
+    train_loss.backward()
+    optimizer.step()
+
+    if it%100==0 and it!=0:
+        print('iter:%d lr:%f train_loss:%f'%(it,optimizer.param_groups[0]['lr'],train_loss.item()))
+        model.eval()
+        count=0
+        for itest in range(100):
+            test_vec=np.reshape(train_images[itest,:,:],[1,28*28])/255.0
+            with torch.no_grad():
+                enc_vec,dec_vec=model(torch.from_numpy(test_vec.astype(np.float32)))
+
+            #visualization
+            in_vec=np.reshape(train_images[itest,:,:],(28,28,1))
+            enc_vec=np.reshape(enc_vec.numpy(),enc_size)
+            dec_vec=np.reshape(dec_vec.numpy(),(28,28,1))*255
+
+            in_vec=cv2.resize(in_vec.astype(np.uint8),(128,128))
+            dec_vec=cv2.resize(dec_vec.astype(np.uint8),(128,128))
+
+            cv2.imshow('input',in_vec)
+            cv2.imshow('output',dec_vec)
+            cv2.waitKey(1)
