@@ -37,7 +37,7 @@ def image_load(img_path,height=128,width=128,bshort=False):
 
 def gt_load(gt_file):
   f=open(gt_file)
-  lines=f.readLines()
+  lines=f.readlines()
   num_gt=len(lines)
   print('gt num:%d'%num_gt)
 
